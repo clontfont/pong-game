@@ -1,0 +1,179 @@
+import pygame
+import random
+
+# Initialize Pygame
+pygame.init()
+
+
+# Set up the screen
+screen_width = 640
+screen_height = 480
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption("Pong Game")
+
+# Colors
+background_color = (19, 41, 75)
+screen.fill(background_color)
+ball_color = (233, 64, 128)
+paddle_color = (255, 129, 0)
+white = (255, 255, 255)  # Define the white color
+background_color2 = (19, 41, 75)
+
+# Paddle properties
+paddle_width = 15
+paddle_height = 100
+paddle_speed = 5
+
+# Ball properties
+ball_width = 25
+ball_speed_x = 3
+ball_speed_y = 3
+
+# Initialize the rotation angle
+ball_rotation_angle = 0
+
+# Load the sprocket logo image
+sprocket_image = pygame.image.load('sprocket.png')  # Replace with your image path
+sprocket_image = pygame.transform.scale(sprocket_image, (ball_width, ball_width))
+
+
+# Create paddles and ball
+player_paddle = pygame.Rect(50, screen_height // 2 - paddle_height // 2, paddle_width, paddle_height)
+opponent_paddle = pygame.Rect(screen_width - 50 - paddle_width, screen_height // 2 - paddle_height // 2, paddle_width, paddle_height)
+ball = pygame.Rect(screen_width // 2 - ball_width // 2, screen_height // 2 - ball_width // 2, ball_width, ball_width)
+
+# Ball direction
+ball_direction_x = 1
+ball_direction_y = 1
+
+# Clock to control the frame rate
+clock = pygame.time.Clock()
+
+# Add the game start variable before the game loop
+game_started = False
+
+# Create a font object for the "press enter to start" text
+intro_font = pygame.font.Font(None, 48)
+
+# At the beginning of the script, before the game loop:
+player_score = 0
+opponent_score = 0
+font = pygame.font.Font(None, 36)
+
+score_limit = 5  # Set the desired score limit
+opponent_reaction_delay = 10  # Increase this value to make the opponent slower
+
+# Main game loop
+running = True
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_UP] and player_paddle.top > 0:
+        player_paddle.y -= paddle_speed
+    if keys[pygame.K_DOWN] and player_paddle.bottom < screen_height:
+        player_paddle.y += paddle_speed
+        
+    # Check for "Enter" key press to start the game
+    if keys[pygame.K_RETURN] and not game_started:
+        game_started = True
+
+    if game_started == False:
+        screen.fill(background_color)
+        intro_text = intro_font.render("Press Enter to Start", True, white)
+        intro_text_rect = intro_text.get_rect(center=(screen_width // 2, screen_height // 2))
+        screen.blit(intro_text, intro_text_rect)
+    else:
+
+        # Ball movement
+        ball.x += ball_speed_x * ball_direction_x
+        ball.y += ball_speed_y * ball_direction_y
+
+       # Ball collision with walls
+        if ball.top <= 0 or ball.bottom >= screen_height:
+            ball_direction_y *= -1
+        if ball.colliderect(player_paddle) or ball.colliderect(opponent_paddle):
+            ball_direction_x *= -1
+            # Increase ball speed gradually after a collision
+            ball_speed_x *= 1.10
+            ball_speed_y *= 1.10
+
+        # Decrement opponent_reaction_delay
+        if opponent_reaction_delay > 0:
+            opponent_reaction_delay -= 1
+
+        # Opponent paddle AI with customizable reaction delay
+        if opponent_reaction_delay == 0:
+            if opponent_paddle.centery < ball.centery:
+                opponent_paddle.y += paddle_speed
+            else:
+                opponent_paddle.y -= paddle_speed
+            opponent_reaction_delay = 1  # Set this to a low value for a more responsive AI
+
+        # Check for a score and update the scoreboard
+        if ball_direction_x == -1 and ball.right <= 0:
+            opponent_score += 1
+            ball.center = (screen_width // 2, screen_height // 2)
+            # Reset ball speed after a score
+            ball_speed_x = 3
+            ball_speed_y = 3
+        elif ball_direction_x == 1 and ball.left >= screen_width:
+            player_score += 1
+            ball.center = (screen_width // 2, screen_height // 2)
+            # Reset ball speed after a score
+            ball_speed_x = 3
+            ball_speed_y = 3
+
+
+        # Check if the game has ended
+        if player_score >= score_limit or opponent_score >= score_limit:
+            running = False
+
+        # Clear the screen
+        screen.fill(background_color)
+
+        # Draw paddles and ball with the new colors
+        pygame.draw.rect(screen, paddle_color, player_paddle)
+        pygame.draw.rect(screen, paddle_color, opponent_paddle)
+
+        # Rotate the sprocket image based on the rotation angle
+        rotated_sprocket = pygame.transform.rotate(sprocket_image, ball_rotation_angle)
+
+        # Get the rotated rectangle for the sprocket image
+        rotated_sprocket_rect = rotated_sprocket.get_rect(center=ball.center)
+
+        # Draw the rotated sprocket image
+        screen.blit(rotated_sprocket, rotated_sprocket_rect)
+
+        # Update the display
+        pygame.display.update()
+
+        # Increment the rotation angle
+        ball_rotation_angle += 1  # Adjust the value for desired rotation speed
+
+
+        # Render the player's score
+        player_text = font.render("Player: " + str(player_score), True, white)
+        screen.blit(player_text, (20, 20))
+
+        # Render the opponent's score
+        opponent_text = font.render("Opponent: " + str(opponent_score), True, white)
+        screen.blit(opponent_text, (screen_width - opponent_text.get_width() - 20, 20))
+
+        # Score a point and update the scoreboard
+        if ball_direction_x == -1 and ball.right <= 0:
+            opponent_score += 1
+        elif ball_direction_x == 1 and ball.left >= screen_width:
+            player_score += 1
+
+        # Update the display
+        pygame.display.update()
+
+        # Cap the frame rate
+        clock.tick(60)
+
+
+# Clean up
+pygame.quit()
